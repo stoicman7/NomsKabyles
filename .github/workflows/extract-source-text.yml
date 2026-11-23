@@ -1,10 +1,13 @@
-name: Extract Ismwaen source text
+name: Extract Ismwaen source layout
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/extract-source-text.yml'
+      - 'scripts/extract_source_text.py'
+      - 'scripts/extract_bold_inventory.py'
+      - '*.pdf'
 
 permissions:
   contents: read
@@ -12,7 +15,7 @@ permissions:
 jobs:
   extract:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Check out source PDFs
         uses: actions/checkout@v4
@@ -20,13 +23,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Extract PDF text with page boundaries
+      - name: Extract PDF text and typography
         run: |
           python -m pip install --disable-pip-version-check pymupdf
           python scripts/extract_source_text.py
-      - name: Upload extracted text
+          python scripts/extract_bold_inventory.py
+      - name: Upload private editorial extraction artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ismwaen-source-text
+          name: ismwaen-pdf-layout
           path: extracted/
-          retention-days: 1
+          retention-days: 2
