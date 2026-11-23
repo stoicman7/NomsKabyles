@@ -63,7 +63,7 @@ let entries=[],ready=false;
 function norm(v){return String(v||"").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ɣ/g,"gh").replace(/[’‘\u0060´]/g,"'").replace(/[–—-]/g," ").replace(/\s+/g," ").trim()}
 function names(e){return [e.name].concat(Array.isArray(e.variants)?e.variants:[]).filter(Boolean)}
 function el(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=String(txt);return n}
-function find(q){const k=norm(q);return entries.map(e=>{const a=names(e).map(norm);let s=a.includes(k)?100:a.some(x=>x.startsWith(k))?70:a.some(x=>x.includes(k))?50:norm(e.meaning).includes(k)?15:0;return {e,s}}).filter(x=>x.s).sort((a,b)=>b.s-a.s||a.e.name.localeCompare(b.e.name,"fr")).map(x=>x.e)}
+function find(q){const k=norm(q);return entries.map(e=>{const a=names(e).map(norm);let s=a.includes(k)?100:a.some(x=>x.startsWith(k))?70:a.some(x=>x.includes(k))?50:0;return {e,s}}).filter(x=>x.s).sort((a,b)=>b.s-a.s||a.e.name.localeCompare(b.e.name,"fr")).map(x=>x.e)}
 function closeList(){suggestions.classList.remove("open");suggestions.replaceChildren();input.setAttribute("aria-expanded","false")}
 function field(parent,label,value){if(!value)return;const box=el("div","entryfield");box.append(el("div","fieldlabel",label),el("p","",value));parent.append(box)}
 function showEntry(e){
