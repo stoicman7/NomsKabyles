@@ -35,6 +35,9 @@ def clean_meaning(value):
     value = re.sub(r"\([^()]{1,120}\b[A-ZÀ-Ž][A-Za-zÀ-ž-]{2,}(?:\s+[A-ZÀ-Ž][A-Za-zÀ-ž-]+)*\s*:\s*\d+[^()]*\)", "", value)
     value = re.sub(r"\([^()]{1,120}\b[A-ZÀ-Ž][A-Za-zÀ-ž-]{2,},\s*(?:18|19|20)\d{2}[^()]*\)", "", value)
     value = re.sub(r"\([^()]{1,100}[A-Za-zÀ-ž.-]{2,20}\s*:\s*\d+[^()]*\)", "", value)
+    # Catch citations that use comma-separated year/page formats or abbreviated references.
+    value = re.sub(r"\s*\((?=[^()]{1,160}(?:(?:18|19|20)\d{2}\s*[:,]\s*\d+|(?:18|19|20)\d{2}\s*,\s*\d+|:\s*\d+|,\s*(?:18|19|20)\d{2}\s*\)))[^()]*\)", "", value)
+    value = re.sub(r"\b(?:souligne|selon|d’après)\s+Ahmed[- ]\s*Zaid(?:[- ]\s*Chertouk)?\s*", "", value, flags=re.I)
     value = re.sub(r"D’après\s+[A-ZÀ-Ž][A-Za-zÀ-ž' -]{2,60}\s*\(:\s*\d+\),?\s*", "", value, flags=re.I)
     value = re.sub(r"les significations relevées par Ahmed-Zaid rejoignent, pour beaucoup, ces sens, ainsi", "on retrouve également ces sens dans les termes", value, flags=re.I)
     value = re.sub(r"(?<=[A-Za-zÀ-ž])\d+(?=\s|[,.;:!?)]|$)", "", value)
@@ -216,6 +219,16 @@ for record in grouped.values():
 entries.extend(added_entries)
 data["totalEntries"] = len(entries)
 
+# Remove bibliography-like citations from every public definition, including legacy entries.
+cleaned_reference_entries = 0
+for entry in entries:
+    previous = entry.get("meaning", "")
+    cleaned = clean_meaning(previous)
+    if cleaned != previous:
+        cleaned_reference_entries += 1
+    entry["meaning"] = cleaned
+    entry["shortMeaning"] = cleaned if len(cleaned) <= 500 else cleaned[:497].rsplit(" ", 1)[0] + "…"
+
 ids = [entry.get("id") for entry in entries]
 if len(ids) != len(set(ids)):
     raise ValueError("Duplicate entry IDs detected")
@@ -246,6 +259,7 @@ report = {
     "bold_spellings_missing_after_fix": len(missing),
     "variants_added_to_existing_entries": len(updated_variants),
     "normalized_alias_collision_keys": len(collisions),
+    "entries_cleaned_of_bibliographic_references": cleaned_reference_entries,
     "added_entry_names": [entry["name"] for entry in added_entries],
     "added_variants": updated_variants,
     "validation": {"unique_ids": True, "all_bold_spellings_searchable": True, "bold_spelling_keys": len(all_bold_spellings)},
