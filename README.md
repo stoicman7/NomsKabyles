@@ -2,37 +2,21 @@
 
 Ismwaen est un dictionnaire numérique consacré aux noms de famille kabyles.
 
-## Structure
+## Fonctionnement
 
-- index.html : interface publique, recherche instantanée et fiches.
-- dictionary.json : base éditoriale structurée, séparée de l'interface.
-- Les documents de travail présents dans le dépôt ne sont pas affichés aux visiteurs.
+- Recherche instantanée dans 2 100 fiches de noms.
+- Variantes orthographiques et normalisation des accents et de la translittération.
+- Fiches présentant la signification ou l'interprétation disponible, avec des renvois vers les noms associés.
+- Base indépendante de l'interface : `dictionary.json`.
+- Les interprétations formulées comme hypothèses sont signalées comme telles.
 
-## Ajouter une fiche
+## Structure d'une fiche
 
-Ajouter un objet dans le tableau entries de dictionary.json :
+`id`, `name`, `variants`, `meaning`, `shortMeaning`, `qualification`, `relatedNames`.
 
-{
-  "id": "nom-normalise",
-  "name": "Nom",
-  "variants": ["Variante 1", "Variante 2"],
-  "shortMeaning": "Résumé court.",
-  "meaning": "Explication complète.",
-  "origin": "Origine linguistique ou géographique établie.",
-  "etymology": "Analyse étymologique documentée.",
-  "history": "Éléments historiques et culturels vérifiés.",
-  "region": "Ancrage géographique, si connu.",
-  "pronunciation": "Prononciation, si connue.",
-  "notes": "Informations complémentaires.",
-  "tags": ["Anthroponymie"],
-  "qualification": "Précision sur le degré de certitude.",
-  "sourceRefs": ["Références éditoriales internes"]
-}
-
-Les champs inconnus peuvent être omis. Ne pas inventer de signification : publier une fiche uniquement lorsque son contenu est suffisamment étayé. Les références internes ne sont jamais affichées dans l'interface publique.
-
-La recherche gère les accents, la casse, les espaces, les variantes enregistrées et la translittération courante ɣ/gh.
+Les informations manquantes ne sont pas inventées. La base est conçue pour être enrichie et corrigée à mesure que de nouvelles connaissances sont validées.
 
 ## Publication
 
-Publier index.html et dictionary.json ensemble à la racine de main. Pour GitHub Pages : Settings > Pages > Deploy from a branch > main > /(root).
+Le site est statique : `index.html` et `dictionary.json` doivent rester à la racine de `main`.
+Pour GitHub Pages : Settings → Pages → Deploy from a branch → main → /(root).
