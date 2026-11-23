@@ -122,6 +122,8 @@ def extract_meaning(rows, head, next_index):
     for index in range(head["idx"] + 1, next_index):
         row = rows[index]
         text = " ".join(line_text(row, 10).split()).strip()
+        if re.match(r"^(?:Bibliographie|Indexe? des patronymes)\b", text, re.I):
+            break
         if not text or re.fullmatch(r"\d{1,3}", text):
             continue
         sizes = [float(s.get("size", 0)) for s in row.get("spans", []) if s.get("text", "").strip()]
@@ -149,6 +151,22 @@ for source, first_page, last_page in [("at_weghlis", 7, 195), ("at_yeemel", 31, 
         all_bold_spellings.update(norm(name) for name in group)
         next_index = heads[head_index + 1]["idx"] if head_index + 1 < len(heads) else len(rows)
         all_groups.append({"source": source, "page": head["page"], "group": group, "meaning": extract_meaning(rows, head, next_index)})
+
+# Separate definitions that were accidentally joined in the earlier plain-text import.
+# Also remove a following headword definition when that surname is bold in the other volume.
+all_bold_names = sorted({name for item in all_groups for name in item["group"]}, key=len, reverse=True)
+all_bold_pattern = re.compile(
+    r"(?<![\w])(" + "|".join(re.escape(name) for name in all_bold_names) + r")\d*\s*:",
+    re.I,
+) if all_bold_names else None
+for item in all_groups:
+    body = item["meaning"]
+    if body and all_bold_pattern:
+        for match in all_bold_pattern.finditer(body):
+            if norm(match.group(1)) != norm(item["group"][0]):
+                body = body[:match.start()].rstrip(" ;,:")
+                break
+    item["meaning"] = body
 
 grouped = {}
 for group in all_groups:
@@ -220,6 +238,77 @@ for record in grouped.values():
 entries.extend(added_entries)
 data["totalEntries"] = len(entries)
 
+# Rebuild every canonical entry from its own bold heading, including entries that already
+# existed in the older dictionary. The previous importer only updated newly added names,
+# which left neighbouring surname definitions joined together.
+direct_meanings = {}
+for item in all_groups:
+    if not item["meaning"]:
+        continue
+    for name in item["group"]:
+        direct_meanings.setdefault(norm(name), []).append(item["meaning"])
+
+canonical_lookup = {}
+variant_lookup = {}
+for index, entry in enumerate(entries):
+    canonical_lookup.setdefault(norm(entry.get("name", "")), []).append(index)
+    for alias in entry.get("variants", []):
+        variant_lookup.setdefault(norm(alias), []).append(index)
+
+updated_direct_entries = []
+for key, candidates in direct_meanings.items():
+    indices = canonical_lookup.get(key) or variant_lookup.get(key) or []
+    if not indices:
+        continue
+    best = max(candidates, key=lambda meaning: (len(meaning), meaning.count("«")))
+    for index in indices:
+        entry = entries[index]
+        if entry.get("meaning", "") != best:
+            entry["meaning"] = best
+            entry["shortMeaning"] = best if len(best) <= 500 else best[:497].rsplit(" ", 1)[0] + "…"
+            updated_direct_entries.append(entry["name"])
+
+# A spelling with its own standalone bold heading is a dictionary entry, not merely
+# a variant of another surname. Split it into its own record if an earlier import merged it.
+single_head_names = {
+    name for item in all_groups if len(item["group"]) == 1 for name in item["group"]
+}
+canonical_norms = {norm(entry.get("name", "")) for entry in entries}
+split_standalone_names = []
+for name in sorted(single_head_names, key=lambda value: value.casefold()):
+    key = norm(name)
+    if key in canonical_norms:
+        continue
+    owner_indices = variant_lookup.get(key, [])
+    body = max(direct_meanings.get(key, [""]), key=len, default="")
+    if not body:
+        body = "Renvoi à vérifier dans le dictionnaire."
+    for owner_index in owner_indices:
+        entries[owner_index]["variants"] = [
+            alias for alias in entries[owner_index].get("variants", []) if norm(alias) != key
+        ]
+    new_id = slug(name)
+    existing_ids = {entry.get("id") for entry in entries}
+    base_id = new_id
+    suffix = 2
+    while new_id in existing_ids:
+        new_id = f"{base_id}-{suffix}"
+        suffix += 1
+    new_entry = {
+        "id": new_id,
+        "name": name,
+        "variants": [],
+        "meaning": body,
+        "shortMeaning": body if len(body) <= 500 else body[:497].rsplit(" ", 1)[0] + "…",
+    }
+    if re.search(r"\b(probable|probablement|pourrait|pourraient|serait|seraient|semble|semblent|peut-être|hypothèse|possible|possiblement|désignerait|viendrait)\b", body, re.I):
+        new_entry["qualification"] = "Interprétation proposée : le texte présente une ou plusieurs pistes, qui ne doivent pas être considérées comme une certitude étymologique."
+    entries.append(new_entry)
+    canonical_norms.add(key)
+    split_standalone_names.append(name)
+
+data["totalEntries"] = len(entries)
+
 # Remove bibliography-like citations from every public definition, including legacy entries.
 cleaned_reference_entries = 0
 for entry in entries:
@@ -261,6 +350,8 @@ report = {
     "variants_added_to_existing_entries": len(updated_variants),
     "normalized_alias_collision_keys": len(collisions),
     "entries_cleaned_of_bibliographic_references": cleaned_reference_entries,
+    "entries_rebuilt_from_own_bold_headings": len(set(updated_direct_entries)),
+    "standalone_names_split_from_variants": split_standalone_names,
     "added_entry_names": [entry["name"] for entry in added_entries],
     "added_variants": updated_variants,
     "validation": {"unique_ids": True, "all_bold_spellings_searchable": True, "bold_spelling_keys": len(all_bold_spellings)},
