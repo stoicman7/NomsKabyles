@@ -85,6 +85,8 @@
     .page-label { color:#91a096; font-size:10px; font-weight:650; white-space:nowrap; }
     .excerpt { margin:0; color:#405d51; font-size:13px; line-height:1.85; overflow-wrap:anywhere; }
     mark { padding:1px 3px; border-radius:4px; color:#203d31; background:#e4f3c8; font-weight:760; }
+    .source-open { color:#557d67; font-size:10px; font-weight:750; text-decoration:none; white-space:nowrap; }
+    .source-open:hover { text-decoration:underline; }
     .result-foot { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid #f0f3ee; color:#9aa79f; font-size:10px; }
     .empty-state { margin-top:18px; padding:34px 24px; border:1px dashed #d7e2d6; border-radius:18px; text-align:center; background:rgba(255,255,255,.56); }
     .empty-symbol { display:grid; place-items:center; width:43px; height:43px; margin:0 auto 14px; border-radius:14px; color:#4b6b5c; background:#e9f1e2; }
@@ -136,7 +138,7 @@
           <h1 id="hero-title">Chaque nom porte une <em>histoire.</em></h1>
           <p class="hero-copy">Explorez les noms de famille kabyles et retrouvez les traces de leur histoire dans les sources documentaires.</p>
           <div class="hero-meta">
-            <span class="meta-pill"><span class="meta-dot"></span> Deux ouvrages de référence</span>
+            <span class="meta-pill"><span class="meta-dot"></span> Deux sources documentaires</span>
             <span class="meta-pill">Recherche dans les textes originaux</span>
           </div>
         </div>
@@ -160,7 +162,7 @@
           <span class="results-count" id="results-count">En attente</span>
         </div>
         <div id="results-container">
-          <div class="welcome"><span class="welcome-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2.5v15M2.5 10h15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><div><h3>Votre recherche commence ici</h3><p>Entrez un nom de famille. Ismwaen cherchera les occurrences correspondantes dans les deux ouvrages et affichera les passages retrouvés.</p></div></div>
+          <div class="welcome"><span class="welcome-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2.5v15M2.5 10h15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><div><h3>Votre recherche commence ici</h3><p>Entrez un nom de famille. Ismwaen cherchera les occurrences correspondantes dans les deux documents et affichera les passages retrouvés.</p></div></div>
         </div>
       </section>
       <section class="about" id="apropos">
@@ -251,15 +253,15 @@
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
-        const text = pageTextFromItems(content.items);
-        pages.push({ source: source.title, page: pageNumber, text, folded: foldText(text) });
+        const text = pageTextFromItems(content.items).replace(/\s+/g, " ").trim();
+        if (text) pages.push({ source: source.title, file: source.file, page: pageNumber, text, folded: foldText(text) });
         if (pageNumber % 5 === 0 || pageNumber === pdf.numPages) {
           setStatus("Lecture de " + source.title + " — " + pageNumber + " / " + pdf.numPages + " pages", "loading");
         }
         page.cleanup();
       }
       await pdf.destroy();
-      return pdf.numPages;
+      return { pages: pdf.numPages, searchable: pages.filter((entry) => entry.source === source.title).length };
     }
 
     function isWordCharacter(value) {
@@ -311,7 +313,7 @@
       top.append(source, page);
       const excerpt = document.createElement("p");
       excerpt.className = "excerpt";
-      const compact = result.page.text.replace(/\s+/g, " ").trim();
+      const compact = result.page.text;
       const left = Math.max(0, result.match.start - 190);
       const right = Math.min(compact.length, result.match.end + 210);
       const snippet = compact.slice(left, right);
@@ -326,7 +328,13 @@
       note.textContent = "Passage retrouvé dans le document original";
       const count = document.createElement("span");
       count.textContent = result.count > 1 ? result.count + " occurrences sur cette page" : "1 occurrence sur cette page";
-      foot.append(note, count);
+      const openPage = document.createElement("a");
+      openPage.className = "source-open";
+      openPage.href = result.page.file + "#page=" + result.page.page;
+      openPage.target = "_blank";
+      openPage.rel = "noopener noreferrer";
+      openPage.textContent = "Ouvrir la page";
+      foot.append(note, count, openPage);
       card.append(top, excerpt, foot);
       return card;
     }
@@ -388,26 +396,27 @@
 
     async function initialise() {
       let loaded = 0;
+      let searchable = 0;
       const failures = [];
       for (const source of sources) {
-        try { loaded += await readSource(source); }
+        try { const result = await readSource(source); loaded += result.pages; searchable += result.searchable; }
         catch (error) { console.error("Impossible de lire " + source.title, error); failures.push(source.title); }
       }
-      if (pages.length) {
+      if (searchable > 0) {
         input.disabled = false;
         searchButton.disabled = false;
-        if (failures.length) setStatus("Recherche disponible, mais source non chargée : " + failures.join(", "), "error");
-        else setStatus("Les deux sources sont prêtes · " + loaded + " pages indexées dans votre navigateur", "ready");
+        if (failures.length) setStatus("Recherche partielle : source non chargée — " + failures.join(", "), "error");
+        else setStatus("Les deux sources sont prêtes · " + searchable + " pages avec du texte consultable sur " + loaded, "ready");
         resultsCount.textContent = "Prêt à chercher";
       } else {
-        setStatus("Les documents n’ont pas pu être chargés. Vérifiez que les deux PDF sont présents à côté de cette page et réessayez.", "error");
+        setStatus(failures.length ? "Les documents n’ont pas pu être chargés. Vérifiez la présence des deux PDF." : "Les PDF ont été ouverts, mais aucun texte indexable n’a été extrait. Les documents peuvent être numérisés en images.", "error");
         resultsCount.textContent = "Sources indisponibles";
         const box = document.createElement("div");
         box.className = "empty-state";
         const heading = document.createElement("h3");
         heading.textContent = "Impossible de préparer les documents";
         const paragraph = document.createElement("p");
-        paragraph.textContent = "Ismwaen a besoin des deux fichiers PDF du projet et d’une connexion pour charger son moteur de lecture. Rechargez la page après avoir vérifié les fichiers.";
+        paragraph.textContent = "Ismwaen a besoin des deux PDF avec du texte sélectionnable. Si les documents sont des scans, une version OCR sera nécessaire pour rechercher leurs noms.";
         box.append(heading, paragraph);
         resultsContainer.replaceChildren(box);
       }
