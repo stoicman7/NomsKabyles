@@ -1,0 +1,6 @@
+# Keep internal research documents and automation out of the public Pages output.
+exclude:
+  - at weghlis.pdf
+  - at yeemel.pdf
+  - scripts/
+  - .github/
