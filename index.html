@@ -207,6 +207,7 @@
       for (const character of value) {
         let folded = character.toLocaleLowerCase("fr").normalize("NFD").replace(/\p{M}/gu, "");
         folded = folded.replace(/[’‘\u0060´]/g, "'");
+        folded = folded.replace(/ɣ/g, "gh");
         if (/\s/u.test(folded)) folded = " ";
         for (const unit of folded) {
           if (unit === " " && output.endsWith(" ")) continue;
