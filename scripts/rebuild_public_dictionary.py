@@ -38,6 +38,7 @@ def clean_meaning(value):
     # Catch citations that use comma-separated year/page formats or abbreviated references.
     value = re.sub(r"\s*\((?=[^()]{1,160}(?:(?:18|19|20)\d{2}\s*[:,]\s*\d+|(?:18|19|20)\d{2}\s*,\s*\d+|:\s*\d+|,\s*(?:18|19|20)\d{2}\s*\)))[^()]*\)", "", value)
     value = re.sub(r"\b(?:souligne|selon|d’après)\s+Ahmed[- ]\s*Zaid(?:[- ]\s*Chertouk)?\s*", "", value, flags=re.I)
+    value = re.sub(r"\b[A-ZÀ-Ž][A-Za-zÀ-ž-]{2,}\s*,\s*(?:18|19|20)\d{2}[a-z]?\s*", "", value)
     value = re.sub(r"D’après\s+[A-ZÀ-Ž][A-Za-zÀ-ž' -]{2,60}\s*\(:\s*\d+\),?\s*", "", value, flags=re.I)
     value = re.sub(r"les significations relevées par Ahmed-Zaid rejoignent, pour beaucoup, ces sens, ainsi", "on retrouve également ces sens dans les termes", value, flags=re.I)
     value = re.sub(r"(?<=[A-Za-zÀ-ž])\d+(?=\s|[,.;:!?)]|$)", "", value)
