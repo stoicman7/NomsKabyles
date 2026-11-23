@@ -1,16 +1,38 @@
 # Ismwaen
 
-Site de recherche documentaire consacré aux noms de famille kabyles.
+Ismwaen est un dictionnaire numérique consacré aux noms de famille kabyles.
 
-## Fonctionnement
+## Structure
 
-- Recherche dans les textes des deux PDF présents à la racine du dépôt.
-- PDF.js extrait le texte directement dans le navigateur.
-- Chaque résultat affiche un extrait, le document et le numéro de page.
-- Recherche insensible à la casse et aux accents.
-- Aucun nom ni aucune requête n'est envoyé à un serveur applicatif.
+- index.html : interface publique, recherche instantanée et fiches.
+- dictionary.json : base éditoriale structurée, séparée de l'interface.
+- Les documents de travail présents dans le dépôt ne sont pas affichés aux visiteurs.
 
-## Déploiement
+## Ajouter une fiche
 
-Le site est statique : `index.html` et les deux PDF doivent rester dans le même répertoire.
-Pour publier avec GitHub Pages, ouvrir **Settings → Pages**, sélectionner **Deploy from a branch**, puis choisir `main` et `/(root)`.
+Ajouter un objet dans le tableau entries de dictionary.json :
+
+{
+  "id": "nom-normalise",
+  "name": "Nom",
+  "variants": ["Variante 1", "Variante 2"],
+  "shortMeaning": "Résumé court.",
+  "meaning": "Explication complète.",
+  "origin": "Origine linguistique ou géographique établie.",
+  "etymology": "Analyse étymologique documentée.",
+  "history": "Éléments historiques et culturels vérifiés.",
+  "region": "Ancrage géographique, si connu.",
+  "pronunciation": "Prononciation, si connue.",
+  "notes": "Informations complémentaires.",
+  "tags": ["Anthroponymie"],
+  "qualification": "Précision sur le degré de certitude.",
+  "sourceRefs": ["Références éditoriales internes"]
+}
+
+Les champs inconnus peuvent être omis. Ne pas inventer de signification : publier une fiche uniquement lorsque son contenu est suffisamment étayé. Les références internes ne sont jamais affichées dans l'interface publique.
+
+La recherche gère les accents, la casse, les espaces, les variantes enregistrées et la translittération courante ɣ/gh.
+
+## Publication
+
+Publier index.html et dictionary.json ensemble à la racine de main. Pour GitHub Pages : Settings > Pages > Deploy from a branch > main > /(root).
