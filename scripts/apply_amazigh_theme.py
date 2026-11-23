@@ -4,6 +4,11 @@ ROOT = Path(__file__).resolve().parents[1]
 path = ROOT / "index.html"
 html = path.read_text(encoding="utf-8")
 
+# Safe to run repeatedly: keep the existing Amazigh treatment once installed.
+if "--amazigh-blue" in html and "ⵜⴰⵎⴰⵣⵉⵖⵜ" in html and "ⴰⵣⵓⵍ" in html:
+    print("Amazigh visual identity already present; no changes needed")
+    raise SystemExit(0)
+
 replacements = [
     (':root{--paper:#f5f6ef;--white:#fffefa;--ink:#1b3028;--forest:#193d32;--forest2:#285745;--sage:#829486;--line:#e1e7dc;--lime:#d9edb7;--shadow:0 24px 70px #1b372b17}',
      ':root{--paper:#f8f9f6;--white:#fffefa;--ink:#182c3d;--forest:#123b57;--forest2:#006a52;--sage:#718895;--line:#e1e8e8;--lime:#fcd116;--amazigh-blue:#0081c9;--amazigh-green:#009a5b;--amazigh-yellow:#fcd116;--amazigh-red:#d21034;--shadow:0 24px 70px #123b5717}'),
