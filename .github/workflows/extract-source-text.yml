@@ -1,0 +1,32 @@
+name: Extract Ismwaen source text
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/extract-source-text.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out source PDFs
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract PDF text with page boundaries
+        run: |
+          python -m pip install --disable-pip-version-check pymupdf
+          python scripts/extract_source_text.py
+      - name: Upload extracted text
+        uses: actions/upload-artifact@v4
+        with:
+          name: ismwaen-source-text
+          path: extracted/
+          retention-days: 1
